@@ -1,0 +1,44 @@
+esphome:
+  name: udp-audio-streamer-test
+
+esp32:
+  board: esp32-s3-devkitc-1
+  framework:
+    type: esp-idf
+
+wifi:
+  ssid: "test"
+  password: "testpass"
+
+logger:
+api:
+ota:
+  - platform: esphome
+
+external_components:
+  - source: ../components
+    components: [udp_audio_streamer]
+
+i2s_audio:
+  - id: i2s0
+    i2s_lrclk_pin: GPIO42
+    i2s_bclk_pin: GPIO41
+    i2s_mclk_pin: GPIO40
+
+microphone:
+  - platform: i2s_audio
+    id: i2s_mic
+    adc_type: external
+    i2s_audio_id: i2s0
+    i2s_din_pin: GPIO2
+    sample_rate: 16000
+
+udp_audio_streamer:
+  host: 192.0.2.1
+  port: 7000
+  chunk_duration: 32ms
+  buffer_duration: 512ms
+  microphone:
+    microphone: i2s_mic
+    bits_per_sample: 16
+    channels: 0

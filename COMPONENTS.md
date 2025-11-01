@@ -26,6 +26,26 @@ Capacitive touchscreen controller driver for the CST3240 chip with multi-touch s
 
 ---
 
+### udp_audio_streamer
+
+**Type**: Audio Utility
+**Status**: Experimental
+**Platforms**: ESP32-family
+**Frameworks**: ESP-IDF, Arduino
+
+Streams PCM microphone data over UDP on a configurable cadence. Ideal for prototyping wake-word backends or piping audio into custom DSP services without using the built-in voice assistant.
+
+**Documentation**: See [README.md](README.md#udp-audio-streamer)
+**Examples**:
+- [udp-audio-streamer.yaml](examples/udp-audio-streamer.yaml) – Minimal end-to-end streaming setup
+
+**Key Features**:
+- 16–32 bit PCM forwarding at the microphone’s native sample rate
+- Adjustable packet cadence and ring buffer depth
+- Passive mode for sharing an already-running microphone session
+
+---
+
 ## Adding New Components
 
 When adding a new component to this repository:

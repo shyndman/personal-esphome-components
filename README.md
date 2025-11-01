@@ -5,6 +5,7 @@ A collection of custom ESPHome components for various hardware and integrations.
 ## Available Components
 
 - **[cst3240](#cst3240-touchscreen)**: CST3240 capacitive touchscreen controller driver
+- **[udp_audio_streamer](#udp-audio-streamer)**: Always-on UDP microphone audio streaming
 
 ## Installation
 
@@ -147,4 +148,64 @@ GPIO15  ---->  INT (interrupt)
 GPIO16  ---->  RST (reset)
 3.3V    ---->  VCC
 GND     ---->  GND
+
+---
+
+## UDP Audio Streamer
+
+Always-on UDP audio publisher that taps any ESPHome microphone source and forwards PCM frames to a remote listener. Useful for prototyping wake-word engines or raw audio captures outside of the voice assistant pipeline.
+
+### Features
+
+- Streams 16–32 bit PCM, up to two channels, at the microphone’s native sample rate
+- Configurable send cadence (`chunk_duration`) and ring buffer depth (`buffer_duration`)
+- Optional passive mode that only relays audio when another component starts the microphone
+
+### Basic Configuration
+
+```yaml
+external_components:
+  - source: github://shyndman/personal-esphome-components
+    components: [udp_audio_streamer]
+
+i2s_audio:
+  - id: i2s0
+    i2s_lrclk_pin: GPIO42
+    i2s_bclk_pin: GPIO41
+    i2s_mclk_pin: GPIO40
+
+microphone:
+  - platform: i2s_audio
+    id: i2s_mic
+    adc_type: external
+    i2s_audio_id: i2s0
+    i2s_din_pin: GPIO2
+    sample_rate: 16000
+
+udp_audio_streamer:
+  host: 192.168.1.50
+  port: 7000
+  chunk_duration: 40ms
+  buffer_duration: 640ms
+  microphone:
+    microphone: i2s_mic
+    bits_per_sample: 16
+    channels: 0
+```
+
+### Configuration Options
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `host` | String | — | IPv4/IPv6 destination for UDP packets |
+| `port` | Integer | — | Destination UDP port |
+| `chunk_duration` | Time | `32ms` | Audio slice sent per packet |
+| `buffer_duration` | Time | `512ms` | Total ring buffer depth before dropping samples |
+| `microphone` | Microphone Source | — | See [ESPHome microphone source schema](https://esphome.io/components/microphone/index.html) |
+| `passive` | Boolean | `false` | Do not start/stop the microphone automatically |
+
+### Debugging Tips
+
+- For quick verification, use `socat -u UDP-RECV:7000,reuseaddr,fork - | hexdump -Cv` on a desktop.
+- If packets stop, check ESPHome logs for `udp_audio_streamer` warnings about socket send failures or buffer overruns.
 ```
