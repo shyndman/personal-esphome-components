@@ -18,7 +18,7 @@ namespace udp_audio_streamer {
 
 class UDPAudioStreamer : public Component {
  public:
-  ~UDPAudioStreamer() override { this->deallocate_buffers_(); }
+  ~UDPAudioStreamer();
 
   void set_microphone_source(microphone::MicrophoneSource *mic_source) { this->mic_source_ = mic_source; }
   void set_endpoint(const std::string &host, uint16_t port);

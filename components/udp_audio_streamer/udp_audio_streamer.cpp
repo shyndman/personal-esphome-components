@@ -15,6 +15,8 @@ namespace udp_audio_streamer {
 
 static const char *const TAG = "udp_audio_streamer";
 
+UDPAudioStreamer::~UDPAudioStreamer() { this->deallocate_buffers_(); }
+
 void UDPAudioStreamer::set_endpoint(const std::string &host, uint16_t port) {
   this->host_ = host;
   this->port_ = port;
