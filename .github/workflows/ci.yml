@@ -8,7 +8,7 @@ on:
 
 jobs:
   test:
-    name: Test CST3240 Component
+    name: Test Components
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -64,7 +64,7 @@ jobs:
       - name: Update example to use local component
         run: |
           # Replace GitHub source with local path for testing
-          sed -i 's|source: github://shyndman/esphome-cst3240|source: ../components|g' examples/${{ matrix.example }}
+          sed -i 's|source: github://shyndman/personal-esphome-components|source: ../components|g' examples/${{ matrix.example }}
 
       - name: Validate example configuration
         run: |

@@ -24,7 +24,7 @@ ota:
 
 # External component configuration
 external_components:
-  - source: github://shyndman/esphome-cst3240
+  - source: github://shyndman/personal-esphome-components
     components: [cst3240]
 
 # I2C Bus Configuration
