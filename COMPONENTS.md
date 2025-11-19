@@ -46,6 +46,25 @@ Streams PCM microphone data over UDP on a configurable cadence. Ideal for protot
 
 ---
 
+### epaper_spi (Spectra 6 Enhancements)
+
+**Type**: Display Driver Override  
+**Status**: Experimental  
+**Platforms**: ESP32-family  
+**Frameworks**: ESP-IDF, Arduino
+
+Override of ESPHome’s `epaper_spi` component that reproduces the Spectra-6 vendor initialization flow, including dual reset pulses and the post-`PON` `BTST2` booster tuning. Required for panels such as the Good Display GDEP040E01 and other E Ink Spectra 6 glass that otherwise stays blank.
+
+**Documentation**: See [README.md](README.md#spectra-6-epaper-driver-enhancements)  
+**Examples**: Use the sample configuration in the README as a starting point (adjust pins for your carrier).
+
+**Key Features**:
+- Configurable multi-pulse reset handling
+- Automatic “second setting” (`BTST2`) immediately after `PON`
+- Compatible with ESPHome’s custom `init_sequence` YAML option
+
+---
+
 ## Adding New Components
 
 When adding a new component to this repository:

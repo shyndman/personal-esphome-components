@@ -6,6 +6,7 @@ A collection of custom ESPHome components for various hardware and integrations.
 
 - **[cst3240](#cst3240-touchscreen)**: CST3240 capacitive touchscreen controller driver
 - **[udp_audio_streamer](#udp-audio-streamer)**: Always-on UDP microphone audio streaming
+- **[epaper_spi](#spectra-6-epaper-driver-enhancements)**: Extended Spectra-6 ePaper support (double reset + post-power tuning)
 
 ## Installation
 
@@ -158,6 +159,88 @@ Always-on UDP audio publisher that taps any ESPHome microphone source and forwar
 ### Features
 
 - Streams 16–32 bit PCM, up to two channels, at the microphone’s native sample rate
+
+---
+
+## Spectra-6 ePaper Driver Enhancements
+
+An override of ESPHome’s `epaper_spi` component tailored for E Ink Spectra 6 panels (for example Good Display GDEP040E01 or the 7.3" six-color modules). It mirrors the vendor reference flow so color glass initializes reliably on third-party carrier boards.
+
+### Why this override?
+
+- **Dual reset pulses**: Spectra-6 controllers expect two reset pulses with inter-stage dwell. The stock driver issued only one pulse, which left certain panels latched low.
+- **Post-`PON` booster tuning**: After `PON` the vendor firmware immediately reprograms `BTST2` (`0x06` / `0x6F 0x1F 0x17 0x27`). Without this step the panel never refreshes despite successful SPI transfers.
+- **Custom init sequences**: ESPHome’s YAML schema already allows per-panel init tables; this override simply layers the runtime tweaks above while still honoring whatever sequence you provide.
+
+### Using the override
+
+1. Point ESPHome at this repository as an external component:
+
+   ```yaml
+   external_components:
+     - source:
+         type: local
+         path: /path/to/personal-esphome-components
+       components: [epaper_spi]
+   ```
+
+2. Configure the display normally. For Spectra 6 glass the following settings are a good baseline—update the GPIOs and power rail handling to match your hardware:
+
+   ```yaml
+   spi:
+     clk_pin: GPIO7
+     mosi_pin: GPIO9
+
+   output:
+     - platform: gpio
+       id: epaper_power_en
+       pin: GPIO43
+
+   esphome:
+     on_boot:
+       priority: -100
+       then:
+         - output.turn_on: epaper_power_en
+
+   display:
+     - platform: epaper_spi
+       model: spectra-e6
+       dimensions:
+         width: 400
+         height: 600
+       cs_pin: GPIO44
+       dc_pin: GPIO10
+       reset_pin: GPIO38
+       busy_pin:
+         number: GPIO4
+         inverted: true
+         mode:
+           input: true
+           pullup: true
+       data_rate: 10MHz
+       init_sequence:
+         - delay 30ms
+         - [0xAA, 0x49, 0x55, 0x20, 0x08, 0x09, 0x18]
+         - [0x01, 0x3F]
+         - [0x00, 0x5F, 0x69]
+         - [0x05, 0x40, 0x1F, 0x1F, 0x2C]
+         - [0x08, 0x6F, 0x1F, 0x1F, 0x22]
+         - [0x06, 0x6F, 0x1F, 0x17, 0x17]
+         - [0x03, 0x00, 0x54, 0x00, 0x44]
+         - [0x60, 0x02, 0x00]
+         - [0x30, 0x08]
+         - [0x50, 0x3F]
+         - [0x61, 0x01, 0x90, 0x02, 0x58]
+         - [0xE3, 0x2F]
+         - [0x84, 0x01]
+       lambda: |-
+         it.fill(Color(255, 255, 255));
+         it.rectangle(0, 0, it.get_width(), it.get_height(), Color(255, 0, 0));
+   ```
+
+3. Build with ESPHome ≥ 2025.11 so the `init_sequence` override is part of the published schema.
+
+With these changes the Spectra-6 state machine now matches the vendor initialization exactly: dual reset pulses, register init block, post-power booster tuning, refresh, and deep sleep.
 - Configurable send cadence (`chunk_duration`) and ring buffer depth (`buffer_duration`)
 - Optional passive mode that only relays audio when another component starts the microphone
 
