@@ -10,6 +10,7 @@
 #include "esphome/core/component.h"
 #include "esphome/core/ring_buffer.h"
 
+#include <cstdint>
 #include <memory>
 #include <string>
 
@@ -53,6 +54,11 @@ class UDPAudioStreamer : public Component {
   bool passive_{false};
   bool endpoint_valid_{false};
   bool warned_full_{false};
+  bool socket_logged_{false};
+  bool streaming_logged_{false};
+  uint32_t bytes_since_log_{0};
+  uint32_t packets_since_log_{0};
+  uint32_t last_rate_log_ms_{0};
 };
 
 }  // namespace udp_audio_streamer

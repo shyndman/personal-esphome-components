@@ -3,6 +3,7 @@
 #ifdef USE_ESP32
 
 #include "esphome/core/helpers.h"
+#include "esphome/core/hal.h"
 #include "esphome/core/log.h"
 
 #include <cerrno>
@@ -45,6 +46,9 @@ void UDPAudioStreamer::setup() {
   this->endpoint_valid_ = true;
 
   this->audio_stream_info_ = this->mic_source_->get_audio_stream_info();
+  ESP_LOGI(TAG, "Configuring UDP stream to %s:%u (%u Hz, %u channel(s), %u-bit samples)", this->host_.c_str(),
+           this->port_, this->audio_stream_info_.get_sample_rate(), this->audio_stream_info_.get_channels(),
+           this->audio_stream_info_.get_bits_per_sample());
 
   this->send_buffer_size_ = this->audio_stream_info_.ms_to_bytes(this->chunk_duration_ms_);
   if (this->send_buffer_size_ == 0) {
@@ -84,6 +88,7 @@ void UDPAudioStreamer::setup() {
   });
 
   if (!this->passive_ && !this->mic_source_->is_running()) {
+    ESP_LOGD(TAG, "Starting microphone source");
     this->mic_source_->start();
   }
 }
@@ -104,6 +109,7 @@ void UDPAudioStreamer::loop() {
   }
 
   if (!this->passive_ && !this->mic_source_->is_running()) {
+    ESP_LOGD(TAG, "Starting microphone source");
     this->mic_source_->start();
   }
 
@@ -117,6 +123,12 @@ void UDPAudioStreamer::loop() {
     size_t read_bytes = ring->read(this->send_buffer_, this->send_buffer_size_, 0);
     if (read_bytes == 0) {
       break;
+    }
+
+    if (this->audio_stream_info_.get_bits_per_sample() == 16) {
+      for (size_t i = 0; i + 1 < read_bytes; i += 2) {
+        std::swap(this->send_buffer_[i], this->send_buffer_[i + 1]);
+      }
     }
 
     ssize_t sent = this->socket_->sendto(this->send_buffer_, read_bytes, 0,
@@ -137,6 +149,24 @@ void UDPAudioStreamer::loop() {
       break;
     }
     this->status_clear_warning();
+    if (!this->streaming_logged_) {
+      ESP_LOGI(TAG, "Streaming audio packets (%zu bytes) to %s:%u", read_bytes, this->host_.c_str(), this->port_);
+      this->streaming_logged_ = true;
+    }
+    this->bytes_since_log_ += read_bytes;
+    this->packets_since_log_ += 1;
+    uint32_t now = millis();
+    if (this->last_rate_log_ms_ == 0) {
+      this->last_rate_log_ms_ = now;
+    }
+    uint32_t elapsed = now - this->last_rate_log_ms_;
+    if ((elapsed >= 1000) && (this->bytes_since_log_ > 0)) {
+      uint32_t bytes_per_sec = (this->bytes_since_log_ * 1000U) / elapsed;
+      ESP_LOGD(TAG, "Throughput: %u B/s across %u packets", bytes_per_sec, this->packets_since_log_);
+      this->bytes_since_log_ = 0;
+      this->packets_since_log_ = 0;
+      this->last_rate_log_ms_ = now;
+    }
     available = ring->available();
   }
 }
@@ -212,6 +242,10 @@ bool UDPAudioStreamer::ensure_socket_() {
   }
 
   this->socket_ = std::move(sock);
+  if (!this->socket_logged_) {
+    ESP_LOGD(TAG, "UDP socket created for %s:%u", this->host_.c_str(), this->port_);
+    this->socket_logged_ = true;
+  }
   return true;
 }
 
