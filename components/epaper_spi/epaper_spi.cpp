@@ -1,21 +1,23 @@
 #include "epaper_spi.h"
-#include <cinttypes>
 #include "esphome/core/application.h"
 #include "esphome/core/helpers.h"
 #include "esphome/core/log.h"
+#include <cinttypes>
 
 namespace esphome::epaper_spi {
 
 static const char *const TAG = "epaper_spi";
 
 static constexpr const char *const EPAPER_STATE_STRINGS[] = {
-    "IDLE",        "UPDATE",     "RESET",         "RESET_END",
+    "IDLE",           "UPDATE",     "RESET",         "RESET_END",
 
-    "SHOULD_WAIT", "INITIALISE", "TRANSFER_DATA", "POWER_ON",  "REFRESH_SCREEN", "POWER_OFF", "DEEP_SLEEP",
+    "SHOULD_WAIT",    "INITIALISE", "TRANSFER_DATA", "POWER_ON",
+    "REFRESH_SCREEN", "POWER_OFF",  "DEEP_SLEEP",
 };
 
 const char *EPaperBase::epaper_state_to_string_() {
-  if (auto idx = static_cast<unsigned>(this->state_); idx < std::size(EPAPER_STATE_STRINGS))
+  if (auto idx = static_cast<unsigned>(this->state_);
+      idx < std::size(EPAPER_STATE_STRINGS))
     return EPAPER_STATE_STRINGS[idx];
   return "Unknown";
 }
@@ -38,20 +40,22 @@ bool EPaperBase::init_buffer_(size_t buffer_length) {
 }
 
 void EPaperBase::setup_pins_() const {
-  this->dc_pin_->setup();  // OUTPUT
+  this->dc_pin_->setup(); // OUTPUT
   this->dc_pin_->digital_write(false);
 
   if (this->reset_pin_ != nullptr) {
-    this->reset_pin_->setup();  // OUTPUT
+    this->reset_pin_->setup(); // OUTPUT
     this->reset_pin_->digital_write(true);
   }
 
   if (this->busy_pin_ != nullptr) {
-    this->busy_pin_->setup();  // INPUT
+    this->busy_pin_->setup(); // INPUT
   }
 }
 
-float EPaperBase::get_setup_priority() const { return setup_priority::PROCESSOR; }
+float EPaperBase::get_setup_priority() const {
+  return setup_priority::PROCESSOR;
+}
 
 void EPaperBase::command(uint8_t value) {
   this->start_command_();
@@ -66,8 +70,8 @@ void EPaperBase::data(uint8_t value) {
 }
 
 // write a command followed by zero or more bytes of data.
-// The command is the first byte, length is the length of data only in the second byte, followed by the data.
-// [COMMAND, LENGTH, DATA...]
+// The command is the first byte, length is the length of data only in the
+// second byte, followed by the data. [COMMAND, LENGTH, DATA...]
 void EPaperBase::cmd_data(uint8_t command, const uint8_t *ptr, size_t length) {
   ESP_LOGVV(TAG, "Command: 0x%02X, Length: %d, Data: %s", command, length,
             format_hex_pretty(ptr, length, '.', false).c_str());
@@ -129,8 +133,8 @@ void EPaperBase::wait_for_idle_(bool should_wait) {
 
 /**
  * Called during the loop task.
- * First defer for any pending delays, then check if we are waiting for the display to become idle.
- * If not waiting for idle, process the state machine.
+ * First defer for any pending delays, then check if we are waiting for the
+ * display to become idle. If not waiting for idle, process the state machine.
  */
 
 void EPaperBase::loop() {
@@ -146,11 +150,13 @@ void EPaperBase::loop() {
   if (this->waiting_for_idle_) {
     if (this->is_idle_()) {
       this->waiting_for_idle_ = false;
-      ESP_LOGV(TAG, "Screen now idle after %u ms", (unsigned) (millis() - this->waiting_for_idle_start_));
+      ESP_LOGV(TAG, "Screen now idle after %u ms",
+               (unsigned)(millis() - this->waiting_for_idle_start_));
     } else {
 #if ESPHOME_LOG_LEVEL >= ESPHOME_LOG_LEVEL_VERBOSE
       if (now - this->waiting_for_idle_last_print_ >= 1000) {
-        ESP_LOGV(TAG, "Waiting for idle in state %s", this->epaper_state_to_string_());
+        ESP_LOGV(TAG, "Waiting for idle in state %s",
+                 this->epaper_state_to_string_());
         this->waiting_for_idle_last_print_ = millis();
       }
 #endif
@@ -163,69 +169,71 @@ void EPaperBase::loop() {
 /**
  * Process the state machine.
  * Typical state sequence:
- * IDLE -> RESET -> RESET_END -> UPDATE -> INITIALISE -> TRANSFER_DATA -> POWER_ON -> REFRESH_SCREEN -> POWER_OFF ->
- * DEEP_SLEEP -> IDLE
+ * IDLE -> RESET -> RESET_END -> UPDATE -> INITIALISE -> TRANSFER_DATA ->
+ * POWER_ON -> REFRESH_SCREEN -> POWER_OFF -> DEEP_SLEEP -> IDLE
  *
- * Should a subclassed class need to override this, the method will need to be made virtual.
+ * Should a subclassed class need to override this, the method will need to be
+ * made virtual.
  */
 void EPaperBase::process_state_() {
   ESP_LOGV(TAG, "Process state entered in state %s", epaper_state_to_string_());
   switch (this->state_) {
-    default:
-      ESP_LOGD(TAG, "Display is in unhandled state %s", epaper_state_to_string_());
-      this->disable_loop();
-      break;
-    case EPaperState::IDLE:
-      this->disable_loop();
-      break;
-    case EPaperState::RESET:
-      if (this->reset_()) {
-        this->set_state_(EPaperState::UPDATE);
-      } else {
-        this->set_state_(EPaperState::RESET_END, this->reset_duration_);
-      }
-      break;
-    case EPaperState::RESET_END:
-      if (this->reset_()) {
-        this->set_state_(EPaperState::UPDATE);
-      } else {
-        this->set_state_(EPaperState::RESET, this->reset_duration_);
-      }
-      break;
-    case EPaperState::UPDATE:
-      this->do_update_();  // Calls ESPHome (current page) lambda
-      this->set_state_(EPaperState::INITIALISE);
-      break;
-    case EPaperState::INITIALISE:
-      this->initialise_();
-      this->set_state_(EPaperState::TRANSFER_DATA);
-      break;
-    case EPaperState::TRANSFER_DATA:
-      if (!this->transfer_data()) {
-        return;  // Not done yet, come back next loop
-      }
-      this->set_state_(EPaperState::POWER_ON);
-      break;
-    case EPaperState::POWER_ON:
-      this->power_on();
-      this->set_state_(EPaperState::POST_POWER_ON);
-      break;
-    case EPaperState::POST_POWER_ON:
-      this->post_power_on();
-      this->set_state_(EPaperState::REFRESH_SCREEN);
-      break;
-    case EPaperState::REFRESH_SCREEN:
-      this->refresh_screen();
-      this->set_state_(EPaperState::POWER_OFF);
-      break;
-    case EPaperState::POWER_OFF:
-      this->power_off();
-      this->set_state_(EPaperState::DEEP_SLEEP);
-      break;
-    case EPaperState::DEEP_SLEEP:
-      this->deep_sleep();
-      this->set_state_(EPaperState::IDLE);
-      break;
+  default:
+    ESP_LOGD(TAG, "Display is in unhandled state %s",
+             epaper_state_to_string_());
+    this->disable_loop();
+    break;
+  case EPaperState::IDLE:
+    this->disable_loop();
+    break;
+  case EPaperState::RESET:
+    if (this->reset_()) {
+      this->set_state_(EPaperState::UPDATE);
+    } else {
+      this->set_state_(EPaperState::RESET_END, this->reset_duration_);
+    }
+    break;
+  case EPaperState::RESET_END:
+    if (this->reset_()) {
+      this->set_state_(EPaperState::UPDATE);
+    } else {
+      this->set_state_(EPaperState::RESET, this->reset_duration_);
+    }
+    break;
+  case EPaperState::UPDATE:
+    this->do_update_(); // Calls ESPHome (current page) lambda
+    this->set_state_(EPaperState::INITIALISE);
+    break;
+  case EPaperState::INITIALISE:
+    this->initialise_();
+    this->set_state_(EPaperState::TRANSFER_DATA);
+    break;
+  case EPaperState::TRANSFER_DATA:
+    if (!this->transfer_data()) {
+      return; // Not done yet, come back next loop
+    }
+    this->set_state_(EPaperState::POWER_ON);
+    break;
+  case EPaperState::POWER_ON:
+    this->power_on();
+    this->set_state_(EPaperState::POST_POWER_ON);
+    break;
+  case EPaperState::POST_POWER_ON:
+    this->post_power_on();
+    this->set_state_(EPaperState::REFRESH_SCREEN);
+    break;
+  case EPaperState::REFRESH_SCREEN:
+    this->refresh_screen();
+    this->set_state_(EPaperState::POWER_OFF);
+    break;
+  case EPaperState::POWER_OFF:
+    this->power_off();
+    this->set_state_(EPaperState::DEEP_SLEEP);
+    break;
+  case EPaperState::DEEP_SLEEP:
+    this->deep_sleep();
+    this->set_state_(EPaperState::IDLE);
+    break;
   }
 }
 
@@ -238,7 +246,8 @@ void EPaperBase::set_state_(EPaperState state, uint16_t delay) {
   } else {
     this->delay_until_ = 0;
   }
-  ESP_LOGV(TAG, "Enter state %s, delay %u, wait_for_idle=%s", this->epaper_state_to_string_(), delay,
+  ESP_LOGV(TAG, "Enter state %s, delay %u, wait_for_idle=%s",
+           this->epaper_state_to_string_(), delay,
            TRUEFALSE(this->waiting_for_idle_));
 }
 
@@ -274,7 +283,8 @@ void EPaperBase::initialise_() {
     } else {
       const uint8_t num_args = x & 0x7F;
       if (length - index < num_args) {
-        ESP_LOGE(TAG, "Malformed init sequence, cmd = %X, num_args = %u", cmd, num_args);
+        ESP_LOGE(TAG, "Malformed init sequence, cmd = %X, num_args = %u", cmd,
+                 num_args);
         this->mark_failed();
         return;
       }
@@ -294,4 +304,4 @@ void EPaperBase::dump_config() {
   LOG_UPDATE_INTERVAL(this);
 }
 
-}  // namespace esphome::epaper_spi
+} // namespace esphome::epaper_spi

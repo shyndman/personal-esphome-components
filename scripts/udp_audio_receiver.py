@@ -16,7 +16,6 @@ import threading
 import time
 from contextlib import closing
 from typing import Dict, Tuple
-import wave
 
 import numpy as np
 import sounddevice as sd
@@ -63,7 +62,6 @@ def main() -> None:
     packet_stats = {"bytes": 0, "packets": 0, "last_log": time.monotonic(), "underruns": 0}
     block_frames = None
     stop_event = threading.Event()
-    wav_writer: wave.Wave_write | None = None
 
     def udp_reader(sock: socket.socket) -> None:
         nonlocal block_frames

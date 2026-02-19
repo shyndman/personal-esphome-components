@@ -4,8 +4,6 @@ from esphome.components import microphone
 from esphome.automation import maybe_simple_id
 import esphome.config_validation as cv
 from esphome.const import (
-    CONF_BITS_PER_SAMPLE,
-    CONF_CHANNELS,
     CONF_ID,
     CONF_MICROPHONE,
 )

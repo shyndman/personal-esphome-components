@@ -5,8 +5,8 @@
 #ifdef USE_ESP32
 
 #include "esphome/components/microphone/microphone_source.h"
-#include "esphome/core/component.h"
 #include "esphome/core/automation.h"
+#include "esphome/core/component.h"
 
 #include <cstdio>
 #include <mutex>
@@ -20,10 +20,13 @@ namespace esphome {
 namespace microphone_recorder {
 
 class MicrophoneRecorder : public Component {
- public:
-  void set_microphone_source(microphone::MicrophoneSource *mic_source) { this->mic_source_ = mic_source; }
+public:
+  void set_microphone_source(microphone::MicrophoneSource *mic_source) {
+    this->mic_source_ = mic_source;
+  }
 
-  void set_sd_pins(int clk_pin, int cmd_pin, int d0_pin, int d1_pin, int d2_pin, int d3_pin) {
+  void set_sd_pins(int clk_pin, int cmd_pin, int d0_pin, int d1_pin, int d2_pin,
+                   int d3_pin) {
     this->clk_pin_ = clk_pin;
     this->cmd_pin_ = cmd_pin;
     this->d0_pin_ = d0_pin;
@@ -32,10 +35,18 @@ class MicrophoneRecorder : public Component {
     this->d3_pin_ = d3_pin;
   }
 
-  void set_mount_point(const std::string &mount_point) { this->mount_point_ = mount_point; }
-  void set_filename_prefix(const std::string &prefix) { this->filename_prefix_ = prefix; }
-  void set_max_duration_ms(uint32_t duration_ms) { this->max_duration_ms_ = duration_ms; }
-  void set_format_if_mount_failed(bool format_if_failed) { this->format_if_failed_ = format_if_failed; }
+  void set_mount_point(const std::string &mount_point) {
+    this->mount_point_ = mount_point;
+  }
+  void set_filename_prefix(const std::string &prefix) {
+    this->filename_prefix_ = prefix;
+  }
+  void set_max_duration_ms(uint32_t duration_ms) {
+    this->max_duration_ms_ = duration_ms;
+  }
+  void set_format_if_mount_failed(bool format_if_failed) {
+    this->format_if_failed_ = format_if_failed;
+  }
 
   bool start_recording();
   void stop_recording();
@@ -45,7 +56,7 @@ class MicrophoneRecorder : public Component {
   void loop() override;
   void dump_config() override;
 
- protected:
+protected:
   bool mount_sdcard_();
   void unmount_sdcard_();
   bool open_new_file_();
@@ -87,19 +98,21 @@ class MicrophoneRecorder : public Component {
   bool spi_bus_initialized_{false};
 };
 
-class StartRecordingAction : public esphome::automation::Action,
-                             public esphome::automation::Parented<MicrophoneRecorder> {
- public:
+class StartRecordingAction
+    : public esphome::automation::Action,
+      public esphome::automation::Parented<MicrophoneRecorder> {
+public:
   void play(esphome::automation::ActionContext &ctx) override;
 };
 
-class StopRecordingAction : public esphome::automation::Action,
-                            public esphome::automation::Parented<MicrophoneRecorder> {
- public:
+class StopRecordingAction
+    : public esphome::automation::Action,
+      public esphome::automation::Parented<MicrophoneRecorder> {
+public:
   void play(esphome::automation::ActionContext &ctx) override;
 };
 
-}  // namespace microphone_recorder
-}  // namespace esphome
+} // namespace microphone_recorder
+} // namespace esphome
 
-#endif  // USE_ESP32
+#endif // USE_ESP32

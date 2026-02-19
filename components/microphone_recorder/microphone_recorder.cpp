@@ -2,12 +2,12 @@
 
 #ifdef USE_ESP32
 
-#include "esphome/core/log.h"
 #include "esphome/core/hal.h"
+#include "esphome/core/log.h"
 
-#include <esp_vfs_fat.h>
-#include <driver/sdmmc_host.h>
 #include <driver/sdmmc_defs.h>
+#include <driver/sdmmc_host.h>
+#include <esp_vfs_fat.h>
 
 namespace esphome {
 namespace microphone_recorder {
@@ -33,7 +33,9 @@ void MicrophoneRecorder::setup() {
     return;
   }
 
-  auto recorder_callback = [this](const std::vector<uint8_t> &data) { this->handle_audio_data_(data); };
+  auto recorder_callback = [this](const std::vector<uint8_t> &data) {
+    this->handle_audio_data_(data);
+  };
   this->mic_source_->add_data_callback(std::move(recorder_callback));
 }
 
@@ -59,8 +61,9 @@ void MicrophoneRecorder::dump_config() {
   ESP_LOGCONFIG(TAG, "  Mount point: %s", this->mount_point_.c_str());
   ESP_LOGCONFIG(TAG, "  File prefix: %s", this->filename_prefix_.c_str());
   ESP_LOGCONFIG(TAG, "  Max duration: %u ms", this->max_duration_ms_);
-  ESP_LOGCONFIG(TAG, "  Pins: CLK=%d CMD=%d D0=%d D1=%d D2=%d D3=%d", this->clk_pin_, this->cmd_pin_, this->d0_pin_,
-                this->d1_pin_, this->d2_pin_, this->d3_pin_);
+  ESP_LOGCONFIG(TAG, "  Pins: CLK=%d CMD=%d D0=%d D1=%d D2=%d D3=%d",
+                this->clk_pin_, this->cmd_pin_, this->d0_pin_, this->d1_pin_,
+                this->d2_pin_, this->d3_pin_);
 }
 
 bool MicrophoneRecorder::mount_sdcard_() {
@@ -100,9 +103,11 @@ bool MicrophoneRecorder::mount_sdcard_() {
     slot_config.gpio_cs = this->d3_pin_;
     slot_config.host_id = host.slot;
 
-    ret = esp_vfs_fat_sdspi_mount(this->mount_point_.c_str(), &host, &slot_config, &mount_config, &this->card_);
+    ret = esp_vfs_fat_sdspi_mount(this->mount_point_.c_str(), &host,
+                                  &slot_config, &mount_config, &this->card_);
     if (ret != ESP_OK) {
-      ESP_LOGE(TAG, "esp_vfs_fat_sdspi_mount failed (%s)", esp_err_to_name(ret));
+      ESP_LOGE(TAG, "esp_vfs_fat_sdspi_mount failed (%s)",
+               esp_err_to_name(ret));
       if (this->spi_bus_initialized_) {
         spi_bus_free(host.slot);
         this->spi_bus_initialized_ = false;
@@ -114,22 +119,29 @@ bool MicrophoneRecorder::mount_sdcard_() {
     this->spi_host_id_ = host.slot;
   } else {
     sdmmc_host_t host = SDMMC_HOST_DEFAULT();
-    host.flags = (this->d3_pin_ >= 0 && this->d2_pin_ >= 0 && this->d1_pin_ >= 0) ? SDMMC_HOST_FLAG_4BIT : SDMMC_HOST_FLAG_1BIT;
+    host.flags =
+        (this->d3_pin_ >= 0 && this->d2_pin_ >= 0 && this->d1_pin_ >= 0)
+            ? SDMMC_HOST_FLAG_4BIT
+            : SDMMC_HOST_FLAG_1BIT;
     host.max_freq_khz = SDMMC_FREQ_DEFAULT;
 
     sdmmc_slot_config_t slot_config = SDMMC_SLOT_CONFIG_DEFAULT();
-    slot_config.width = (this->d3_pin_ >= 0 && this->d2_pin_ >= 0 && this->d1_pin_ >= 0) ? 4 : 1;
-    slot_config.clk = (gpio_num_t) this->clk_pin_;
-    slot_config.cmd = (gpio_num_t) this->cmd_pin_;
-    slot_config.d0 = (gpio_num_t) this->d0_pin_;
-    slot_config.d1 = (gpio_num_t) ((this->d1_pin_ >= 0) ? this->d1_pin_ : -1);
-    slot_config.d2 = (gpio_num_t) ((this->d2_pin_ >= 0) ? this->d2_pin_ : -1);
-    slot_config.d3 = (gpio_num_t) ((this->d3_pin_ >= 0) ? this->d3_pin_ : -1);
+    slot_config.width =
+        (this->d3_pin_ >= 0 && this->d2_pin_ >= 0 && this->d1_pin_ >= 0) ? 4
+                                                                         : 1;
+    slot_config.clk = (gpio_num_t)this->clk_pin_;
+    slot_config.cmd = (gpio_num_t)this->cmd_pin_;
+    slot_config.d0 = (gpio_num_t)this->d0_pin_;
+    slot_config.d1 = (gpio_num_t)((this->d1_pin_ >= 0) ? this->d1_pin_ : -1);
+    slot_config.d2 = (gpio_num_t)((this->d2_pin_ >= 0) ? this->d2_pin_ : -1);
+    slot_config.d3 = (gpio_num_t)((this->d3_pin_ >= 0) ? this->d3_pin_ : -1);
     slot_config.flags = SDMMC_SLOT_FLAG_INTERNAL_PULLUP;
 
-    ret = esp_vfs_fat_sdmmc_mount(this->mount_point_.c_str(), &host, &slot_config, &mount_config, &this->card_);
+    ret = esp_vfs_fat_sdmmc_mount(this->mount_point_.c_str(), &host,
+                                  &slot_config, &mount_config, &this->card_);
     if (ret != ESP_OK) {
-      ESP_LOGE(TAG, "esp_vfs_fat_sdmmc_mount failed (%s)", esp_err_to_name(ret));
+      ESP_LOGE(TAG, "esp_vfs_fat_sdmmc_mount failed (%s)",
+               esp_err_to_name(ret));
       return false;
     }
     this->using_spi_host_ = false;
@@ -189,7 +201,8 @@ void MicrophoneRecorder::stop_recording() {
     this->close_file_();
   }
 
-  ESP_LOGI(TAG, "Recording finished: %s (%u bytes)", this->active_path_.c_str(), this->data_bytes_written_);
+  ESP_LOGI(TAG, "Recording finished: %s (%u bytes)", this->active_path_.c_str(),
+           this->data_bytes_written_);
 }
 
 bool MicrophoneRecorder::open_new_file_() {
@@ -200,7 +213,8 @@ bool MicrophoneRecorder::open_new_file_() {
   }
 
   char filename[64];
-  snprintf(filename, sizeof(filename), "%s/%s-%lu.wav", this->mount_point_.c_str(), this->filename_prefix_.c_str(),
+  snprintf(filename, sizeof(filename), "%s/%s-%lu.wav",
+           this->mount_point_.c_str(), this->filename_prefix_.c_str(),
            static_cast<unsigned long>(millis()));
   this->active_path_ = filename;
 
@@ -223,7 +237,8 @@ void MicrophoneRecorder::close_file_() {
   }
 }
 
-void MicrophoneRecorder::write_wav_header_(std::FILE *file, uint32_t data_length) {
+void MicrophoneRecorder::write_wav_header_(std::FILE *file,
+                                           uint32_t data_length) {
   const auto info = this->mic_source_->get_audio_stream_info();
   const uint16_t channels = info.get_channels();
   const uint32_t sample_rate = info.get_sample_rate();
@@ -277,7 +292,8 @@ void MicrophoneRecorder::handle_audio_data_(const std::vector<uint8_t> &data) {
 
   size_t written = std::fwrite(data.data(), 1, data.size(), this->file_);
   if (written != data.size()) {
-    ESP_LOGW(TAG, "Short write to recording file (%zu/%zu)", written, data.size());
+    ESP_LOGW(TAG, "Short write to recording file (%zu/%zu)", written,
+             data.size());
     this->pending_stop_ = true;
     return;
   }
@@ -294,7 +310,7 @@ void StopRecordingAction::play(automation::ActionContext &ctx) {
   this->play_next(ctx);
 }
 
-}  // namespace microphone_recorder
-}  // namespace esphome
+} // namespace microphone_recorder
+} // namespace esphome
 
-#endif  // USE_ESP32
+#endif // USE_ESP32

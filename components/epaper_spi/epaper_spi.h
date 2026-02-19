@@ -11,33 +11,35 @@ namespace esphome::epaper_spi {
 using namespace display;
 
 enum class EPaperState : uint8_t {
-  IDLE,       // not doing anything
-  UPDATE,     // update the buffer
-  RESET,      // drive reset low (active)
-  RESET_END,  // drive reset high (inactive)
+  IDLE,      // not doing anything
+  UPDATE,    // update the buffer
+  RESET,     // drive reset low (active)
+  RESET_END, // drive reset high (inactive)
 
-  SHOULD_WAIT,     // states higher than this should wait for the display to be not busy
-  INITIALISE,      // send the init sequence
-  TRANSFER_DATA,   // transfer data to the display
-  POWER_ON,        // power on the display
-  POST_POWER_ON,   // optional post power-on configuration
-  REFRESH_SCREEN,  // send refresh command
-  POWER_OFF,       // power off the display
-  DEEP_SLEEP,      // deep sleep the display
+  SHOULD_WAIT, // states higher than this should wait for the display to be not
+               // busy
+  INITIALISE,  // send the init sequence
+  TRANSFER_DATA,  // transfer data to the display
+  POWER_ON,       // power on the display
+  POST_POWER_ON,  // optional post power-on configuration
+  REFRESH_SCREEN, // send refresh command
+  POWER_OFF,      // power off the display
+  DEEP_SLEEP,     // deep sleep the display
 };
 
-static constexpr uint8_t MAX_TRANSFER_TIME = 10;  // Transfer in 10ms blocks to allow the loop to run
+static constexpr uint8_t MAX_TRANSFER_TIME =
+    10; // Transfer in 10ms blocks to allow the loop to run
 static constexpr uint8_t DELAY_FLAG = 0xFF;
 
-class EPaperBase : public DisplayBuffer,
-                   public spi::SPIDevice<spi::BIT_ORDER_MSB_FIRST, spi::CLOCK_POLARITY_LOW, spi::CLOCK_PHASE_LEADING,
-                                         spi::DATA_RATE_2MHZ> {
- public:
-  EPaperBase(const char *name, uint16_t width, uint16_t height, const uint8_t *init_sequence,
-             size_t init_sequence_length, DisplayType display_type = DISPLAY_TYPE_BINARY)
-      : name_(name),
-        width_(width),
-        height_(height),
+class EPaperBase
+    : public DisplayBuffer,
+      public spi::SPIDevice<spi::BIT_ORDER_MSB_FIRST, spi::CLOCK_POLARITY_LOW,
+                            spi::CLOCK_PHASE_LEADING, spi::DATA_RATE_2MHZ> {
+public:
+  EPaperBase(const char *name, uint16_t width, uint16_t height,
+             const uint8_t *init_sequence, size_t init_sequence_length,
+             DisplayType display_type = DISPLAY_TYPE_BINARY)
+      : name_(name), width_(width), height_(height),
         init_sequence_(init_sequence),
         init_sequence_length_(init_sequence_length),
         display_type_(display_type) {}
@@ -45,7 +47,9 @@ class EPaperBase : public DisplayBuffer,
   float get_setup_priority() const override;
   void set_reset_pin(GPIOPin *reset) { this->reset_pin_ = reset; }
   void set_busy_pin(GPIOPin *busy) { this->busy_pin_ = busy; }
-  void set_reset_duration(uint32_t reset_duration) { this->reset_duration_ = reset_duration; }
+  void set_reset_duration(uint32_t reset_duration) {
+    this->reset_duration_ = reset_duration;
+  }
   void set_reset_cycles(uint8_t reset_cycles) {
     if (reset_cycles == 0) {
       reset_cycles = 1;
@@ -67,7 +71,7 @@ class EPaperBase : public DisplayBuffer,
 
   DisplayType get_display_type() override { return this->display_type_; };
 
- protected:
+protected:
   int get_height_internal() override { return this->height_; };
   int get_width_internal() override { return this->width_; };
   void process_state_();
@@ -126,7 +130,7 @@ class EPaperBase : public DisplayBuffer,
   DisplayType display_type_;
 
   size_t buffer_length_{};
-  size_t current_data_index_{0};  // used by data transfer to track progress
+  size_t current_data_index_{0}; // used by data transfer to track progress
   uint32_t reset_duration_{200};
   uint8_t reset_cycles_{1};
   uint8_t current_reset_cycle_{0};
@@ -149,4 +153,4 @@ class EPaperBase : public DisplayBuffer,
   EPaperState state_{EPaperState::IDLE};
 };
 
-}  // namespace esphome::epaper_spi
+} // namespace esphome::epaper_spi

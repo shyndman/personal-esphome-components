@@ -83,7 +83,8 @@ void EPaperSpectraE6::power_on() {
 
 void EPaperSpectraE6::post_power_on() {
   ESP_LOGD(TAG, "Post power booster config");
-  this->cmd_data(0x06, SECOND_BOOSTER_SETTINGS, sizeof(SECOND_BOOSTER_SETTINGS));
+  this->cmd_data(0x06, SECOND_BOOSTER_SETTINGS,
+                 sizeof(SECOND_BOOSTER_SETTINGS));
 }
 
 void EPaperSpectraE6::power_off() {
@@ -116,7 +117,8 @@ void EPaperSpectraE6::clear() {
   this->fill(COLOR_ON);
 }
 
-void HOT EPaperSpectraE6::draw_absolute_pixel_internal(int x, int y, Color color) {
+void HOT EPaperSpectraE6::draw_absolute_pixel_internal(int x, int y,
+                                                       Color color) {
   if (x >= this->width_ || y >= this->height_ || x < 0 || y < 0)
     return;
 
@@ -138,7 +140,7 @@ bool HOT EPaperSpectraE6::transfer_data() {
 #if ESPHOME_LOG_LEVEL >= ESPHOME_LOG_LEVEL_VERBOSE
     this->transfer_start_time_ = millis();
 #endif
-    ESP_LOGV(TAG, "Start sending data at %ums", (unsigned) millis());
+    ESP_LOGV(TAG, "Start sending data at %ums", (unsigned)millis());
     this->command(0x10);
   }
 
@@ -151,7 +153,7 @@ bool HOT EPaperSpectraE6::transfer_data() {
       this->start_data_();
       this->write_array(bytes_to_send, buf_idx);
       this->end_data_();
-      ESP_LOGV(TAG, "Wrote %d bytes at %ums", buf_idx, (unsigned) millis());
+      ESP_LOGV(TAG, "Wrote %d bytes at %ums", buf_idx, (unsigned)millis());
       buf_idx = 0;
 
       if (millis() - start_time > MAX_TRANSFER_TIME) {
@@ -167,7 +169,8 @@ bool HOT EPaperSpectraE6::transfer_data() {
     this->end_data_();
   }
   this->current_data_index_ = 0;
-  ESP_LOGV(TAG, "Sent data in %" PRIu32 " ms", millis() - this->transfer_start_time_);
+  ESP_LOGV(TAG, "Sent data in %" PRIu32 " ms",
+           millis() - this->transfer_start_time_);
   return true;
 }
-}  // namespace esphome::epaper_spi
+} // namespace esphome::epaper_spi
